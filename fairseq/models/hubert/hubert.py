@@ -388,6 +388,8 @@ class HubertModel(BaseFairseqModel):
         return logits
 
     def forward_features(self, source: torch.Tensor) -> torch.Tensor:
+        # tmp = torch.randn(1, 28).cuda()
+        # conv = nn.Conv1d(1, 1, 3, stride=1).cuda()
         if self.feature_grad_mult > 0:
             features = self.feature_extractor(source)
             if self.feature_grad_mult != 1.0:

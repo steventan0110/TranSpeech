@@ -75,8 +75,9 @@ def load_units(in_file):
     with open(in_file) as f:
         for line in f:
             sample_id, units = line.strip().split("|", 1)
+            # remove post-fix like wav mp3 etc
+            sample_id = sample_id.split('.')[0]
             out[sample_id] = units.split()
-
     return out
 
 

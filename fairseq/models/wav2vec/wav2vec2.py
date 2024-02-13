@@ -890,7 +890,6 @@ class ConvFeatureExtractionModel(nn.Module):
 
         # BxT -> BxCxT
         x = x.unsqueeze(1)
-
         for conv in self.conv_layers:
             x = conv(x)
 

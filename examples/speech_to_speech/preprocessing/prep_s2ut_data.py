@@ -26,44 +26,42 @@ MANIFEST_COLUMNS = ["id", "src_audio", "src_n_frames", "tgt_audio", "tgt_n_frame
 
 def process(args):
     args.output_root.mkdir(exist_ok=True)
-
     print("Generating manifest...")
-    for split in args.data_split:
-        print(f"Processing {split}")
+    split = args.data_split
+    print(f"Processing {split}")
 
-        # load target units
-        target_unit_data = load_units(args.target_dir / f"{split}.txt")
+    # load target units
+    target_unit_data = load_units(args.target_file)
+    manifest = {c: [] for c in MANIFEST_COLUMNS}
+    missing_tgt_audios = []
+    src_audios = list(args.source_dir.glob(f"*.{args.ext}"))
+    for src_audio in tqdm(src_audios):
+        sample_id = src_audio.stem
+        sample_id = sample_id.split(".")[0]
+        if sample_id not in target_unit_data:
+            missing_tgt_audios.append(sample_id)
+            continue
 
-        manifest = {c: [] for c in MANIFEST_COLUMNS}
-        missing_tgt_audios = []
-        src_audios = list(args.source_dir.glob(f"{split}/*.wav"))
-        for src_audio in tqdm(src_audios):
-            sample_id = src_audio.stem
+        src_n_frames = sf.info(src_audio.as_posix()).frames
+        manifest["id"].append(sample_id)
+        manifest["src_audio"].append(src_audio.as_posix())
+        manifest["src_n_frames"].append(
+            src_n_frames // 160
+        )  # estimation of 10-ms frame for 16kHz audio
 
-            if sample_id not in target_unit_data:
-                missing_tgt_audios.append(sample_id)
-                continue
+        target_units = process_units(target_unit_data[sample_id], args.reduce_unit)
+        manifest["tgt_audio"].append(" ".join(target_units))
+        manifest["tgt_n_frames"].append(len(target_units))
 
-            src_n_frames = sf.info(src_audio.as_posix()).frames
-            manifest["id"].append(sample_id)
-            manifest["src_audio"].append(src_audio.as_posix())
-            manifest["src_n_frames"].append(
-                src_n_frames // 160
-            )  # estimation of 10-ms frame for 16kHz audio
+    print(f"Processed {len(manifest['id'])} samples")
+    if len(missing_tgt_audios) > 0:
+        print(
+            f"{len(missing_tgt_audios)} with missing target data (first 3 examples: {', '.join(missing_tgt_audios[:3])})"
+        )
 
-            target_units = process_units(target_unit_data[sample_id], args.reduce_unit)
-            manifest["tgt_audio"].append(" ".join(target_units))
-            manifest["tgt_n_frames"].append(len(target_units))
-
-        print(f"Processed {len(manifest['id'])} samples")
-        if len(missing_tgt_audios) > 0:
-            print(
-                f"{len(missing_tgt_audios)} with missing target data (first 3 examples: {', '.join(missing_tgt_audios[:3])})"
-            )
-
-        out_manifest = args.output_root / f"{split}.tsv"
-        print(f"Writing manifest to {out_manifest}...")
-        save_df_to_tsv(pd.DataFrame.from_dict(manifest), out_manifest)
+    out_manifest = args.output_root / f"{split}.tsv"
+    print(f"Writing manifest to {out_manifest}...")
+    save_df_to_tsv(pd.DataFrame.from_dict(manifest), out_manifest)
 
     # Generate config YAML
     gen_config_yaml(
@@ -82,12 +80,12 @@ def main():
         "--source-dir", required=True, type=Path, help="source audio directory"
     )
     parser.add_argument(
-        "--target-dir", required=True, type=Path, help="target audio directory"
+        "--target-file", required=True, type=Path, help="target audio directory"
     )
+    parser.add_argument("--ext", type=str, default="wav", help="audio file extension")
     parser.add_argument(
         "--data-split",
-        default=["train", "valid", "test"],
-        nargs="+",
+        type=str,
         help="data split names",
     )
     parser.add_argument(

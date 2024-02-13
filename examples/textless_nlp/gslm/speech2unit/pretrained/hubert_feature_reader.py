@@ -29,7 +29,9 @@ class HubertFeatureReader:
         self.max_chunk = max_chunk
 
     def read_audio(self, path, ref_len=None):
-        wav, sr = sf.read(path)
+        # wav, sr = sf.read(path)
+        # we force the sample rate to be consistent with the model
+        wav, sr = librosa.load(path, sr=self.task.cfg.sample_rate)
         if wav.ndim == 2:
             wav = wav.mean(-1)
         assert wav.ndim == 1, wav.ndim
