@@ -8,7 +8,7 @@ import logging
 import os
 
 import numpy as np
-
+import tqdm
 import joblib
 from examples.textless_nlp.gslm.speech2unit.clustering.utils import (
     get_audio_files,
@@ -85,7 +85,15 @@ def main(args, logger):
         features_batch = np.load(args.features_path)
     else:
         logger.info(f"Extracting {args.feature_type} acoustic features...")
-        features_batch = get_features(
+        # features_batch = get_features(
+        #     feature_type=args.feature_type,
+        #     checkpoint_path=args.acoustic_model_path,
+        #     layer=args.layer,
+        #     manifest_path=args.manifest_path,
+        #     sample_pct=1.0,
+        #     flatten=False,
+        # )
+        generator, num_files = get_features(
             feature_type=args.feature_type,
             checkpoint_path=args.acoustic_model_path,
             layer=args.layer,
@@ -93,12 +101,8 @@ def main(args, logger):
             sample_pct=1.0,
             flatten=False,
         )
-        logger.info(
-            f"Features extracted for {len(features_batch)} utterances.\n"
-        )
-        logger.info(
-            f"Dimensionality of representation = {features_batch[0].shape[1]}"
-        )
+        iterator = generator()
+
 
     # K-means model
     logger.info(f"Loading K-means model from {args.kmeans_model_path} ...")
@@ -110,11 +114,13 @@ def main(args, logger):
     os.makedirs(os.path.dirname(args.out_quantized_file_path), exist_ok=True)
     print(f"Writing quantized predictions to {args.out_quantized_file_path}")
     with open(args.out_quantized_file_path, "w") as fout:
-        for i, feats in enumerate(features_batch):
+        for i, feats in tqdm.tqdm(enumerate(iterator), total=num_files):
             pred = kmeans_model.predict(feats)
             pred_str = " ".join(str(p) for p in pred)
-            base_fname = os.path.basename(fnames[i]).rstrip(args.extension)
+            base_fname = os.path.basename(fnames[i])
             fout.write(f"{base_fname}|{pred_str}\n")
+
+
 
 if __name__ == "__main__":
     parser = get_parser()

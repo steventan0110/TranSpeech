@@ -32,12 +32,15 @@ def process(args):
 
     # load target units
     target_unit_data = load_units(args.target_file)
+
+
     manifest = {c: [] for c in MANIFEST_COLUMNS}
     missing_tgt_audios = []
     src_audios = list(args.source_dir.glob(f"*.{args.ext}"))
     for src_audio in tqdm(src_audios):
         sample_id = src_audio.stem
         sample_id = sample_id.split(".")[0]
+
         if sample_id not in target_unit_data:
             missing_tgt_audios.append(sample_id)
             continue

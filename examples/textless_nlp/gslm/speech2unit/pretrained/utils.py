@@ -77,22 +77,23 @@ def get_features(
         manifest_path=manifest_path,
         sample_pct=sample_pct,
     )
-    iterator = generator()
-
-    features_list = []
-    for features in tqdm.tqdm(iterator, total=num_files):
-        features_list.append(features)
-
-    # Explicit clean up
-    del iterator
-    del generator
-    gc.collect()
-    torch.cuda.empty_cache()
-
-    if flatten:
-        return np.concatenate(features_list)
-
-    return features_list
+    return generator, num_files
+    # iterator = generator()
+    #
+    # features_list = []
+    # for features in tqdm.tqdm(iterator, total=num_files):
+    #     features_list.append(features)
+    #
+    # # Explicit clean up
+    # del iterator
+    # del generator
+    # gc.collect()
+    # torch.cuda.empty_cache()
+    #
+    # if flatten:
+    #     return np.concatenate(features_list)
+    #
+    # return features_list
 
 
 def get_and_dump_features(

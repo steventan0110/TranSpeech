@@ -49,7 +49,7 @@ fi
 # perform quantization for the original audio
 if true; then
 for split in "test" "train" "dev"; do
-for lang in "es" "fr"; do
+for lang in "fr" "es"; do
   data_dir=$cvss_dir/$lang-en/$lang/$split
   manifest_file=$exp_dir/cvss/$lang-en/$split.$lang.tsv
 
@@ -60,7 +60,7 @@ for lang in "es" "fr"; do
   echo "finished creating manifest file: $manifest_file"
 
   OUT_QUANTIZED_FILE=$cvss_dir/$lang-en/$lang/$split.quant.tsv
-  if [ ! -e $OUT_QUANTIZED_FILE ]; then
+#  if [ ! -e $OUT_QUANTIZED_FILE ]; then
   PYTHONPATH=$project_root python $project_root/examples/textless_nlp/gslm/speech2unit/clustering/quantize_with_kmeans.py \
       --feature_type $TYPE \
       --kmeans_model_path $KM_MODEL_PATH \
@@ -69,7 +69,7 @@ for lang in "es" "fr"; do
       --manifest_path $manifest_file \
       --out_quantized_file_path $OUT_QUANTIZED_FILE \
       --extension ".mp3"
-  fi
+#  fi
   echo "finished quantizing $split $lang with $KM_MODEL_PATH and $CKPT_PATH at layer $LAYER"
 done
 done

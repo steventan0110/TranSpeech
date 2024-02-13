@@ -39,20 +39,25 @@ def process_units(units, reduce=False):
 
 
 def load_code(in_file, reduce):
+    out = []
     with open(in_file) as f:
-        out = [list(map(int, process_units(line.strip().split(), reduce))) for line in f]
+        for line in f:
+            sample_id, units = line.strip().split("|")
+            units = units.split()
+            units = process_units(units, reduce)
+            units = list(map(int, units))
+            out.append(units)
+        # out = [list(map(int, process_units(line.strip().split(), reduce))) for line in f]
     return out
 
 
 def main(args):
     logger.info(args)
-
     use_cuda = torch.cuda.is_available() and not args.cpu
 
     with open(args.vocoder_cfg) as f:
         vocoder_cfg = json.load(f)
     vocoder = CodeHiFiGANVocoder(args.vocoder, vocoder_cfg)
-
     if use_cuda:
         vocoder = vocoder.cuda()
 
@@ -69,6 +74,7 @@ def main(args):
     data = load_code(args.in_code_file, args.reduce)
     Path(args.results_path).mkdir(exist_ok=True, parents=True)
     for i, d in tqdm(enumerate(data), total=len(data)):
+        # shape (bz=1, unit_len)
         x = {
             "code": torch.LongTensor(d).view(1, -1),
         }
@@ -85,6 +91,8 @@ def main(args):
         x = utils.move_to_cuda(x) if use_cuda else x
         wav = vocoder(x, args.dur_prediction)
         dump_result(args, i, wav, suffix=suffix)
+        if args.limit is not None and i >= args.limit:
+            return
 
 
 def cli_main():
@@ -113,6 +121,7 @@ def cli_main():
         default=-1,
         help="Speaker id (for vocoder that supports multispeaker). Set to -1 to randomly sample speakers.",
     )
+    parser.add_argument("--limit", type=int, default=None, help="limit the number of samples")
     parser.add_argument("--cpu", action="store_true", help="run on CPU")
     parser.add_argument("--reduce", action="store_true", help="reduce unit")
     args = parser.parse_args()

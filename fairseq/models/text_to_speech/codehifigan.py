@@ -48,6 +48,7 @@ class CodeGenerator(Generator):
         return signal
 
     def forward(self, **kwargs):
+        # bz x T -> bz x T x H -> bz x H x T
         x = self.dict(kwargs["code"]).transpose(1, 2)
 
         if self.dur_predictor and kwargs.get("dur_prediction", False):
@@ -56,7 +57,7 @@ class CodeGenerator(Generator):
             dur_out = torch.clamp(
                 torch.round((torch.exp(log_dur_pred) - 1)).long(), min=1
             )
-            # B x C x T
+            # B x C x T -> B x C x T' (T' = T * dur_out)
             x = torch.repeat_interleave(x, dur_out.view(-1), dim=2)
 
         if self.multispkr:
@@ -70,8 +71,6 @@ class CodeGenerator(Generator):
         for k, feat in kwargs.items():
             if k in ["spkr", "code", "dur_prediction"]:
                 continue
-
             feat = self._upsample(feat, x.shape[-1])
             x = torch.cat([x, feat], dim=1)
-
         return super().forward(x)
